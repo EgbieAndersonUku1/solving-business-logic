@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     
     'event_management.apps.EventManagementConfig',
+    'LibraryManagementSystem.apps.LibrarymanagementsystemConfig',
     
     
     'django.contrib.admin',
