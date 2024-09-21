@@ -1,7 +1,7 @@
-# **Django Model Practice Repository**
+## **Exploring Business Logic Solutions with Django Models**
 
 ## **Description**
-This repository is dedicated to practising Django model relationships, focusing on real-world business scenarios. Each app within this repository is designed to address a specific business logic problem that requires the implementation of Django models and ORM functionalities.
+This repository is dedicated to using/practising Django model relationships, focusing on real-world business scenarios. Each app within this repository is designed to address a specific business logic problem that requires the implementation of Django models and ORM functionalities.
 
 ### **Purpose**
 The aim is to develop practical skills with Django’s model system, including ForeignKey, ManyToMany, and OneToOne relationships, while leveraging the Django admin interface to interact with the models. This project deliberately avoids the complexity of a full user interface, allowing for a concentrated focus on backend development.
