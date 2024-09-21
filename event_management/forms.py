@@ -26,8 +26,8 @@ class EventAdminForm(forms.ModelForm):
         
     def clean(self):
         cleaned_data = super().clean()
-        start_date = cleaned_data["start_date"]
-        end_date   = cleaned_data["end_date"]
+        start_date   = cleaned_data["start_date"]
+        end_date     = cleaned_data["end_date"]
         
         if start_date > end_date:
             raise forms.ValidationError("The start date must be before the end date")
@@ -57,14 +57,13 @@ class SessionAdminForm(forms.ModelForm):
         
     def clean(self):
         cleaned_data = super().clean()
-        event = cleaned_data.get("event")
-        start_date = cleaned_data.get("start_date")
-        end_date = cleaned_data.get("end_date")
+        event        = cleaned_data.get("event")
+        start_date   = cleaned_data.get("start_date")
+        end_date     = cleaned_data.get("end_date")
 
       
         if event and start_date and end_date:
             
-
             if not (event.start_date <= start_date <= event.end_date):
                 self.add_error('start_date', "The start date must be within the event's date range.")
             
@@ -85,8 +84,7 @@ class SessionAdminForm(forms.ModelForm):
         return instance
     
    
-   
-   
+
 class AttendeeAdminForm(forms.ModelForm):
     class Meta:
         model    = Attendee
