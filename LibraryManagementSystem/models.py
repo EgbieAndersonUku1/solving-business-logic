@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from django.db import transaction
+
 # Create your models here.
 
 class Library(models.Model):
@@ -55,6 +57,10 @@ class Library(models.Model):
 
 
 class LibraryHours(models.Model):
+    class Meta:
+        verbose_name        = "Library Hour"
+        verbose_name_plural = "Library Hours"
+        
     class DAYS_OF_WEEK:
         MONDAY    = "mon"
         TUESDAY   = "tue"
@@ -104,9 +110,8 @@ class BorrowBook(models.Model):
     due_date              = models.DateField()
     return_date           = models.DateField(blank=True, null=True)
     limit_reached         = models.BooleanField(default=False)
+      
 
-    
-    
     class Meta:
         verbose_name = "Loan Book"
         verbose_name_plural = "Loan Books"
@@ -114,11 +119,63 @@ class BorrowBook(models.Model):
     def __str__(self) -> str:
         return f"The book <{self.book.title.title()}> is loaned to <{self.member.full_name}> from <{self.library.name.title()}>"
     
-    def can_borrow(self):
-        pass
-        # current_borrowed_count = self.num_of_books_borrowed  
-        # return current_borrowed_count < self.library.max_borrow_limit
     
+    def num_of_books_borrowed(self):
+        num_of_books_borrowed = BorrowBook.objects.filter(
+            member=self.member,
+            library=self.library,
+            status=BorrowBook.STATUS.BORROWED
+        ).count()
+        return num_of_books_borrowed
+    
+    
+    def can_borrow(self):
+        """
+        Checks if the member can borrow more books based on the library's borrowing limit.
+        
+        Returns:
+            bool: True if the member can borrow more books, False otherwise.
+        """
+    
+        return self.num_of_books_borrowed() < self.library.max_borrow_limit
+
+    def borrow_book(self):
+        """
+        Handles the process of borrowing a book from the library.
+
+        Returns:
+            bool: True if the book was successfully borrowed, False otherwise. 
+                If any exception occurs during the process, it will print the exception 
+                and return False, ensuring the operation does not leave the database in 
+                an inconsistent state.
+
+        Exceptions:
+            Any exceptions raised during the operation will be caught, printed, and will 
+            result in a return value of False.
+        """
+        
+        try:
+            # Uses transactions to ensure data integrity by preventing issues such as 
+            # race conditions and concurrent operations, which can lead to dirty reads, 
+            # lost updates, or inconsistent data.
+            with transaction.atomic:
+                if not self.book.is_book_available:
+                    return False
+                
+                elif not self.can_borrow():
+                    return False
+                
+                if self.book.available_copies > 0:
+                    self.book.available_copies -= 1
+                    self.book.save()
+                    return True
+        
+            return True
+        except Exception as e:
+            print(e)
+        return False        
+       
+      
     def is_overdue(self):
         current_date = timezone.now().date()
         return self.due_date < current_date and self.return_date == None
@@ -232,5 +289,14 @@ class Book(models.Model):
         """The location where the book can be found"""
         return self.library.name
 
+    def save(self, *args, **kwargs):
+        
+        if self.available_copies <= 0:
+            self.is_book_available = False
+        else:
+            self.is_book_available = True
+    
+        super().save(*args, **kwargs)
+        
     def __str__(self) -> str:
         return self.title.title()

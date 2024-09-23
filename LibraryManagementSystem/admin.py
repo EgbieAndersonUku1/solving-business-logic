@@ -10,6 +10,8 @@ from .models import Library, Member, Book, BorrowBook, Author, LibraryHours
 
 class LibraryHoursInline(admin.TabularInline):
     model = LibraryHours
+    verbose_name        = "Library Hour"
+    verbose_name_plural = "Library Hours"
     extra = 7  
     
     

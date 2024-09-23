@@ -14,3 +14,5 @@ class BorrowBookForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
+        book         = cleaned_data["book"]
+        
