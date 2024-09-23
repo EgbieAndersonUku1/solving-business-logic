@@ -4,8 +4,9 @@ from django.utils import timezone
 # Create your models here.
 
 class Library(models.Model):
-    name = models.CharField(max_length=40, unique=True)
+    name             = models.CharField(max_length=40, unique=True)
     max_borrow_limit = models.PositiveSmallIntegerField()
+    location         = models.CharField(max_length=30, blank=True, null=True)
     
     class Meta:
         verbose_name = "Library"
@@ -23,7 +24,7 @@ class Library(models.Model):
         """
         return self.books.count()
     
-    def available_books(self):
+    def get_available_books_count(self):
         """
         Returns the number of books available to be reserved or borrowed.
 
@@ -32,7 +33,7 @@ class Library(models.Model):
         """
         return self.books.filter(is_book_available=True).count()
     
-    def non_available_books(self):
+    def get_non_available_books_count(self):
         """
         Returns the number of books that are not available to be borrowed.
 
@@ -42,7 +43,7 @@ class Library(models.Model):
         return self.book_records.filter(status=BorrowBook.STATUS.BORROWED).count()
     
     
-    def reserved_books(self):
+    def get_reserved_books_count(self):
         """
         Returns the number of books not available for reservation.
 
@@ -51,7 +52,39 @@ class Library(models.Model):
         """
         return self.book_records.filter(status=BorrowBook.STATUS.RESERVED).count()
     
-      
+
+
+class LibraryHours(models.Model):
+    class DAYS_OF_WEEK:
+        MONDAY    = "mon"
+        TUESDAY   = "tue"
+        WEDNESDAY = "wed"
+        THURSDAY  = "thu"
+        FRIDAY    = "fri"
+        SATURDAY  = "sat"
+        SUNDAY    = "sun"
+        
+        CHOICES = [
+            (MONDAY, "Monday"),
+            (TUESDAY, "Tuesday"),
+            (WEDNESDAY, "Wednesday"),
+            (THURSDAY, "Thursday"),
+            (FRIDAY, "Friday"),
+            (SATURDAY, "Saturday"),
+            (SUNDAY, "Sunday")
+        ]
+    library       = models.ForeignKey(Library, on_delete=models.CASCADE, related_name="hours")
+    day_of_week   = models.CharField(choices=DAYS_OF_WEEK.CHOICES, max_length=3)
+    opening_time  = models.TimeField()
+    closing_time  = models.TimeField()
+    
+    class Meta:
+        unique_together = ('library', 'day_of_week')
+
+    def __str__(self):
+        return f"{self.library.name} - {self.day_of_week}: {self.opening_time} to {self.closing_time}"
+
+
 class BorrowBook(models.Model):
     class STATUS:
         BORROWED = "B"
@@ -70,6 +103,8 @@ class BorrowBook(models.Model):
     status                = models.CharField(choices=STATUS.CHOICES, max_length=2)
     due_date              = models.DateField()
     return_date           = models.DateField(blank=True, null=True)
+    limit_reached         = models.BooleanField(default=False)
+
     
     
     class Meta:
@@ -104,8 +139,7 @@ class Member(models.Model):
     email                 = models.EmailField(max_length=40, unique=True)
     membership_date       = models.DateTimeField(auto_now_add=True)
     library               = models.ManyToManyField(Library, related_name="members")
-    limit_reached         = models.BooleanField(default=False)
-
+ 
     @property
     def full_name(self):
         """Returns the full name of the member"""
@@ -186,6 +220,7 @@ class Book(models.Model):
     modified_on      = models.DateTimeField(auto_now=True)
     is_book_available = models.BooleanField(default=True)
     library          = models.ForeignKey(Library, on_delete=models.CASCADE, related_name="books")
+    available_copies = models.PositiveSmallIntegerField(default=10)
 
     @property
     def num_of_authors(self):

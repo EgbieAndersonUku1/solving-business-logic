@@ -5,26 +5,31 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest 
 
 # Register your models here.
-from .models import Library, Member, Book, BorrowBook, Author
+from .models import Library, Member, Book, BorrowBook, Author, LibraryHours
 
 
-
+class LibraryHoursInline(admin.TabularInline):
+    model = LibraryHours
+    extra = 7  
+    
+    
 class LibraryAdmin(admin.ModelAdmin):
-    list_display       = ["id", "name", "book_count", "available_books", "non_available_books", "reserved_books", "overdue_books"]
+    list_display       = ["id", "name", "book_count", "get_available_books_count", "get_non_available_books_count", "get_reserved_books_count", "overdue_books"]
     search_fields      = ["name"]
     list_display_links = ["id", "name"]
+    inlines            = [LibraryHoursInline]
     
     def book_count(self, obj):
         return obj.book_count()
     
-    def available_books(self, obj):
-        return obj.available_books()
+    def get_available_books_count(self, obj):
+        return obj.get_available_books_count()
     
-    def non_available_books(self, obj):
-        return obj.non_available_books()
+    def get_non_available_books_count(self, obj):
+        return obj.get_non_available_books_count()
     
-    def reserved_books(self, obj):
-        return obj.reserved_books()
+    def get_reserved_books_count(self, obj):
+        return obj.get_reserved_books_count()
     
     def overdue_books(self, obj):
         """Get the number of overdue books the library has"""
@@ -32,7 +37,7 @@ class LibraryAdmin(admin.ModelAdmin):
     
     
     book_count.short_description = "Total number of books"
-    reserved_books.short_description = "Num of reserved books"
+    get_reserved_books_count.short_description = "Num of reserved books"
 
 
 class MemberAdmin(admin.ModelAdmin):
@@ -58,7 +63,7 @@ class AuthorAdmin(admin.ModelAdmin):
 
 
 class BookAdmin(admin.ModelAdmin):
-    list_display       = ["id", "title", "ISBN", "publication_date", "genre", "created_on", "num_of_authors", "library_location"]
+    list_display       = ["id", "title", "ISBN", "publication_date", "genre", "created_on", "num_of_authors", "library_location", "available_copies"]
     list_display_links = ["title", "ISBN"]
     search_fields      = ["title", "ISBN", "genre"]
     readonly_fields    = ["created_on", "modified_on", "ISBN"]
@@ -96,9 +101,13 @@ class BorrowBookAdmin(admin.ModelAdmin):
     
   
 
+
+    
+    
 admin.site.register(Library, LibraryAdmin)
 admin.site.register(Member, MemberAdmin)
 admin.site.register(Author, AuthorAdmin)
 admin.site.register(Book, BookAdmin)
 admin.site.register(BorrowBook, BorrowBookAdmin)
+
     
