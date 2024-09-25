@@ -6,6 +6,8 @@ from django.http import HttpRequest
 
 # Register your models here.
 from .models import Library, Member, Book, BorrowBook, Author, LibraryHours
+from LibraryManagementSystem.forms.loan_book_form import BorrowBookForm
+
 
 
 class LibraryHoursInline(admin.TabularInline):
@@ -52,6 +54,12 @@ class MemberAdmin(admin.ModelAdmin):
     def total_num_of_books_borrowed(self, obj):
         return obj.total_num_of_books_borrowed
 
+    def total_libraries(self, obj):
+        return obj.total_libraries
+    
+    total_libraries.short_description = "Num of affiliated libraries"
+    
+    
 
 class AuthorAdmin(admin.ModelAdmin):
     list_display       = ["id", "first_name", "last_name", "count_written_books", "created_on", "modified_on"]
@@ -64,12 +72,13 @@ class AuthorAdmin(admin.ModelAdmin):
       return obj.count_written_books()
 
 
+
 class BookAdmin(admin.ModelAdmin):
     list_display       = ["id", "title", "ISBN", "publication_date", "genre", "created_on", "num_of_authors", "library_location", "available_copies"]
     list_display_links = ["title", "ISBN"]
     search_fields      = ["title", "ISBN", "genre"]
     readonly_fields    = ["created_on", "modified_on", "ISBN"]
-    
+  
     def num_of_authors(self, obj):
         """The number of authors for a given book"""
         return obj.num_of_authors
@@ -78,11 +87,12 @@ class BookAdmin(admin.ModelAdmin):
         """The location where the book can be found"""
         return obj.library_location.title()
     
-    
+   
     
 class BorrowBookAdmin(admin.ModelAdmin):
-    list_display = ["member__first_name", "member__last_name", "member__email", "book", "status", "due_date", "return_date", "is_overdue"]
-    search_fields   = ["library__name", "book__title", "member__first_name", "member__email"]
+    list_display  = ["member__first_name", "member__last_name", "member__email", "book", "status", "due_date", "return_date", "is_overdue"]
+    search_fields = ["library__name", "book__title", "member__first_name", "member__email"]
+    form          = BorrowBookForm
     
     def get_search_results(self, request: HttpRequest, queryset: QuerySet[Any], search_term: str) -> tuple[QuerySet[Any], bool]:
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
@@ -104,8 +114,6 @@ class BorrowBookAdmin(admin.ModelAdmin):
   
 
 
-    
-    
 admin.site.register(Library, LibraryAdmin)
 admin.site.register(Member, MemberAdmin)
 admin.site.register(Author, AuthorAdmin)

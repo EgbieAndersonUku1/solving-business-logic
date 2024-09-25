@@ -145,35 +145,29 @@ class BorrowBook(models.Model):
 
         Returns:
             bool: True if the book was successfully borrowed, False otherwise. 
-                If any exception occurs during the process, it will print the exception 
-                and return False, ensuring the operation does not leave the database in 
+                If any exception occurs during the process, it will raise and exception error 
+                which ensuring the operation does not leave the database in 
                 an inconsistent state.
 
         Exceptions:
-            Any exceptions raised during the operation will be caught, printed, and will 
-            result in a return value of False.
+            Any exceptions raised during the operation will be caught
         """
         
         try:
             # Uses transactions to ensure data integrity by preventing issues such as 
             # race conditions and concurrent operations, which can lead to dirty reads, 
             # lost updates, or inconsistent data.
-            with transaction.atomic:
-                if not self.book.is_book_available:
+            with transaction.atomic():
+                if not self.book.is_book_available or not self.can_borrow():
                     return False
-                
-                elif not self.can_borrow():
-                    return False
-                
+            
                 if self.book.available_copies > 0:
                     self.book.available_copies -= 1
-                    self.book.save()
-                    return True
-        
-            return True
+                    return self.book.save()
+                   
         except Exception as e:
-            print(e)
-        return False        
+            raise ValueError(e)
+             
        
       
     def is_overdue(self):
@@ -291,11 +285,8 @@ class Book(models.Model):
 
     def save(self, *args, **kwargs):
         
-        if self.available_copies <= 0:
-            self.is_book_available = False
-        else:
-            self.is_book_available = True
-    
+        self.available_copies = self.available_copies > 0
+      
         super().save(*args, **kwargs)
         
     def __str__(self) -> str:
