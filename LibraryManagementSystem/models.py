@@ -5,6 +5,73 @@ from django.db import transaction
 
 # Create your models here.
 
+class DAYS_OF_WEEK:
+    
+    MONDAY    = "mon"
+    TUESDAY   = "tue"
+    WEDNESDAY = "wed"
+    THURSDAY  = "thu"
+    FRIDAY    = "fri"
+    SATURDAY  = "sat"
+    SUNDAY    = "sun"
+        
+    CHOICES = [
+            (MONDAY, "Monday"),
+            (TUESDAY, "Tuesday"),
+            (WEDNESDAY, "Wednesday"),
+            (THURSDAY, "Thursday"),
+            (FRIDAY, "Friday"),
+            (SATURDAY, "Saturday"),
+            (SUNDAY, "Sunday")
+        ]
+    
+
+class GENRE:
+        ACTION = "A"
+        ADVENTURE = "AA"
+        COMEDY = "C"
+        CRIME = "CR"
+        DRAMA = "D"
+        FANTASY = "F"
+        HISTORICAL = "HIS"
+        HORROR = "H"
+        MYSTERY = "M"
+        ROMANCE = "R"
+        SCIENCE_FICTION = "SF"
+        THRILLER = "T"
+        WESTERN = "W"
+
+        CHOICES = [
+            (ACTION, "Action"),
+            (ADVENTURE, "Adventure"),
+            (COMEDY, "Comedy"),
+            (CRIME, "Crime"),
+            (DRAMA, "Drama"),
+            (FANTASY, "Fantasy"),
+            (HISTORICAL, "Historical"),
+            (HORROR, "Horror"),
+            (MYSTERY, "Mystery"),
+            (ROMANCE, "Romance"),
+            (SCIENCE_FICTION, "Science Fiction"),
+            (THRILLER, "Thriller"),
+            (WESTERN, "Western"),
+        ]
+        
+
+class STATUS:
+    
+    BORROWED  = "B"
+    RESERVED  = "R"
+    RETURNED  = "RR"
+        
+    CHOICES = [
+        (BORROWED, "Borrowed"),
+        (RESERVED, "Reserved"),
+        (RETURNED, "Returned"),
+            
+    ]
+    
+     
 class Library(models.Model):
     name             = models.CharField(max_length=40, unique=True)
     max_borrow_limit = models.PositiveSmallIntegerField()
@@ -42,7 +109,7 @@ class Library(models.Model):
         Returns:
             int: The count of available books.
         """
-        return self.book_records.filter(status=BorrowBook.STATUS.BORROWED).count()
+        return self.book_records.filter(status=STATUS.BORROWED).count()
     
     
     def get_reserved_books_count(self):
@@ -52,33 +119,19 @@ class Library(models.Model):
         Returns:
             int: The count of non-available books.
         """
-        return self.book_records.filter(status=BorrowBook.STATUS.RESERVED).count()
+        return self.book_records.filter(status=STATUS.RESERVED).count()
     
-
-
+    def get_members_count(self):
+        return self.members.count()
+    
+    def display_member(self):
+        return self.members
+    
 class LibraryHours(models.Model):
     class Meta:
         verbose_name        = "Library Hour"
         verbose_name_plural = "Library Hours"
-        
-    class DAYS_OF_WEEK:
-        MONDAY    = "mon"
-        TUESDAY   = "tue"
-        WEDNESDAY = "wed"
-        THURSDAY  = "thu"
-        FRIDAY    = "fri"
-        SATURDAY  = "sat"
-        SUNDAY    = "sun"
-        
-        CHOICES = [
-            (MONDAY, "Monday"),
-            (TUESDAY, "Tuesday"),
-            (WEDNESDAY, "Wednesday"),
-            (THURSDAY, "Thursday"),
-            (FRIDAY, "Friday"),
-            (SATURDAY, "Saturday"),
-            (SUNDAY, "Sunday")
-        ]
+ 
     library       = models.ForeignKey(Library, on_delete=models.CASCADE, related_name="hours")
     day_of_week   = models.CharField(choices=DAYS_OF_WEEK.CHOICES, max_length=3)
     opening_time  = models.TimeField()
@@ -92,24 +145,14 @@ class LibraryHours(models.Model):
 
 
 class BorrowBook(models.Model):
-    class STATUS:
-        BORROWED = "B"
-        RESERVED = "R"
-        RETURNED  = "RR"
-        
-        CHOICES = [
-            (BORROWED, "Borrowed"),
-            (RESERVED, "Reserved"),
-            (RETURNED, "Returned"),
-            
-        ]
-    library               = models.ForeignKey(Library, on_delete=models.CASCADE, related_name="book_records")
-    book                  = models.ForeignKey("Book", on_delete=models.CASCADE, related_name="book_records")
-    member                = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="book_records")
-    status                = models.CharField(choices=STATUS.CHOICES, max_length=2)
-    due_date              = models.DateField()
-    return_date           = models.DateField(blank=True, null=True)
-    limit_reached         = models.BooleanField(default=False)
+ 
+    library        = models.ForeignKey(Library, on_delete=models.CASCADE, related_name="book_records")
+    book           = models.ForeignKey("Book", on_delete=models.CASCADE, related_name="book_records")
+    member         = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="book_records")
+    status         = models.CharField(choices=STATUS.CHOICES, max_length=2)
+    due_date       = models.DateField()
+    return_date    = models.DateField(blank=True, null=True)
+    limit_reached  = models.BooleanField(default=False)
       
 
     class Meta:
@@ -119,15 +162,13 @@ class BorrowBook(models.Model):
     def __str__(self) -> str:
         return f"The book <{self.book.title.title()}> is loaned to <{self.member.full_name}> from <{self.library.name.title()}>"
     
-    
     def num_of_books_borrowed(self):
         num_of_books_borrowed = BorrowBook.objects.filter(
             member=self.member,
             library=self.library,
-            status=BorrowBook.STATUS.BORROWED
+            status=STATUS.BORROWED
         ).count()
         return num_of_books_borrowed
-    
     
     def can_borrow(self):
         """
@@ -163,13 +204,12 @@ class BorrowBook(models.Model):
             
                 if self.book.available_copies > 0:
                     self.book.available_copies -= 1
-                    return self.book.save()
+                    self.book.save()
+                    return True
                    
         except Exception as e:
             raise ValueError(e)
              
-       
-      
     def is_overdue(self):
         current_date = timezone.now().date()
         return self.due_date < current_date and self.return_date == None
@@ -178,11 +218,9 @@ class BorrowBook(models.Model):
     def overdue_books(cls, library):
         """Return the number of overdue books for a given library."""
         current_date = timezone.now().date()
-        return cls.objects.filter(library=library, status=cls.STATUS.BORROWED, due_date__lt=current_date, return_date__isnull=True).count()
+        return cls.objects.filter(library=library, status=STATUS.BORROWED, due_date__lt=current_date, return_date__isnull=True).count()
     
     
-
-  
 
 class Member(models.Model):
     first_name            = models.CharField(max_length=40)
@@ -231,41 +269,11 @@ class Author(models.Model):
 
 
 class Book(models.Model):
-    class Genre:
-        ACTION = "A"
-        ADVENTURE = "AA"
-        COMEDY = "C"
-        CRIME = "CR"
-        DRAMA = "D"
-        FANTASY = "F"
-        HISTORICAL = "HIS"
-        HORROR = "H"
-        MYSTERY = "M"
-        ROMANCE = "R"
-        SCIENCE_FICTION = "SF"
-        THRILLER = "T"
-        WESTERN = "W"
-
-        CHOICES = [
-            (ACTION, "Action"),
-            (ADVENTURE, "Adventure"),
-            (COMEDY, "Comedy"),
-            (CRIME, "Crime"),
-            (DRAMA, "Drama"),
-            (FANTASY, "Fantasy"),
-            (HISTORICAL, "Historical"),
-            (HORROR, "Horror"),
-            (MYSTERY, "Mystery"),
-            (ROMANCE, "Romance"),
-            (SCIENCE_FICTION, "Science Fiction"),
-            (THRILLER, "Thriller"),
-            (WESTERN, "Western"),
-        ]
-
+   
     title            = models.CharField(max_length=100)
     ISBN             = models.CharField(max_length=10, unique=True)
     publication_date = models.DateField()
-    genre            = models.CharField(choices=Genre.CHOICES, default=Genre.ACTION, max_length=3)
+    genre            = models.CharField(choices=GENRE.CHOICES, default=GENRE.ACTION, max_length=3)
     author           = models.ManyToManyField(Author, related_name="books")
     created_on       = models.DateTimeField(auto_now_add=True)
     modified_on      = models.DateTimeField(auto_now=True)
@@ -285,7 +293,8 @@ class Book(models.Model):
 
     def save(self, *args, **kwargs):
         
-        self.available_copies = self.available_copies > 0
+        if self.is_book_available:
+            self.is_book_available = self.available_copies > 0
       
         super().save(*args, **kwargs)
         

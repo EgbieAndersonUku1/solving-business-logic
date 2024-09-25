@@ -9,7 +9,6 @@ from .models import Library, Member, Book, BorrowBook, Author, LibraryHours
 from LibraryManagementSystem.forms.loan_book_form import BorrowBookForm
 
 
-
 class LibraryHoursInline(admin.TabularInline):
     model = LibraryHours
     verbose_name        = "Library Hour"
@@ -18,10 +17,17 @@ class LibraryHoursInline(admin.TabularInline):
     
     
 class LibraryAdmin(admin.ModelAdmin):
-    list_display       = ["id", "name", "book_count", "get_available_books_count", "get_non_available_books_count", "get_reserved_books_count", "overdue_books"]
+    list_display       = ["id", "name", "book_count", "get_available_books_count", 
+                          "get_non_available_books_count", 
+                          "get_reserved_books_count", 
+                          "overdue_books",
+                          "get_members_count"
+                          ]
+    
     search_fields      = ["name"]
     list_display_links = ["id", "name"]
     inlines            = [LibraryHoursInline]
+    readonly_fields    = ('display_members',)
     
     def book_count(self, obj):
         return obj.book_count()
@@ -35,13 +41,24 @@ class LibraryAdmin(admin.ModelAdmin):
     def get_reserved_books_count(self, obj):
         return obj.get_reserved_books_count()
     
+    def get_members_count(self, obj):
+        return obj.get_members_count()
+    
     def overdue_books(self, obj):
         """Get the number of overdue books the library has"""
         return BorrowBook.overdue_books(obj)
     
+    def display_members(self, obj):
+        return ", ".join([member.full_name for member in obj.members.all() if member])
+
+    display_members.short_description = 'Members'
+    
     
     book_count.short_description = "Total number of books"
     get_reserved_books_count.short_description = "Num of reserved books"
+    get_non_available_books_count.short_description = "Num of non-available books"
+    get_available_books_count.short_description = "Num of available books"
+    get_members_count.short_description = "Num of members"
 
 
 class MemberAdmin(admin.ModelAdmin):

@@ -2,7 +2,7 @@
 from django import forms
 
 
-from LibraryManagementSystem.models import BorrowBook, Book, Member
+from LibraryManagementSystem.models import BorrowBook, Book, Member, STATUS
 
 
 class BorrowBookForm(forms.ModelForm):
@@ -20,9 +20,9 @@ class BorrowBookForm(forms.ModelForm):
         book    = cleaned_data.get("book")
         status  = cleaned_data.get("status")
         
-        is_member = Member.objects.filter(library=library, id=member.id).exists()
+        is_library_member = Member.objects.filter(library=library, email=member.email).exists()
         
-        if not is_member:
+        if not is_library_member:
             raise forms.ValidationError("You must be a member of this library to borrow books.")
         
         # Validate if the book exists in the library
@@ -39,10 +39,10 @@ class BorrowBookForm(forms.ModelForm):
             member=member, 
             library=library, 
             book=book, 
-            status=BorrowBook.STATUS.BORROWED
+            status=STATUS.BORROWED
         )
         
-        if borrow_books.count() > 1 and status == BorrowBook.STATUS.BORROWED:
+        if borrow_books.count() > 1 and status == STATUS.BORROWED:
             raise forms.ValidationError("You can only borrow one copy of a book at a time.")
         
         # Check if the member has exceeded the borrowing limit
@@ -58,8 +58,8 @@ class BorrowBookForm(forms.ModelForm):
         instance = super().save(commit=False)
         
         if commit:
-            raise forms.ValidationError(instance.borrow_book())
             instance.save()
+            instance.borrow_book()
         return instance
             
             
