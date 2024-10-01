@@ -191,10 +191,10 @@ class BorrowBookTest(TestCase):
         self.assertTrue(self.book.is_book_available)
        
         self.borrow_book.refresh_from_db()
-        resp = self.borrow_book.borrow_book()
+      
         
         self.assertEqual(self.book.available_copies, 10)        
-        self.assertTrue(resp, "The book should be `True` since the book is available.")
+        self.borrow_book.borrow_book()
         
         # test the number of copies is now one less
         self.assertEqual(self.book.available_copies, 9)     

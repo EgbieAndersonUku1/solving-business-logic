@@ -194,6 +194,7 @@ class BorrowBook(models.Model):
             Any exceptions raised during the operation will be caught
         """
         
+    
         try:
             # Uses transactions to ensure data integrity by preventing issues such as 
             # race conditions and concurrent operations, which can lead to dirty reads, 
@@ -201,12 +202,9 @@ class BorrowBook(models.Model):
             with transaction.atomic():
                 if not self.book.is_book_available or not self.can_borrow():
                     return False
-            
-                if self.book.available_copies > 0:
-                    self.book.available_copies -= 1
-                    self.book.save()
-                    return True
-                   
+
+                self.book.decrement_available_copies()
+                                  
         except Exception as e:
             raise ValueError(e)
              
@@ -290,6 +288,12 @@ class Book(models.Model):
     def library_location(self):
         """The location where the book can be found"""
         return self.library.name
+
+    def decrement_available_copies(self, save=True):
+        if self.available_copies > 0:
+            self.available_copies -= 1
+            if save:
+                self.save()
 
     def save(self, *args, **kwargs):
         

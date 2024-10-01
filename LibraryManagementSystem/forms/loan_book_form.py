@@ -1,6 +1,7 @@
 
 from django import forms
-
+from django.utils import timezone 
+from datetime import datetime
 
 from LibraryManagementSystem.models import BorrowBook, Book, Member, STATUS
 
@@ -19,6 +20,7 @@ class BorrowBookForm(forms.ModelForm):
         member  = cleaned_data.get("member")
         book    = cleaned_data.get("book")
         status  = cleaned_data.get("status")
+        due_date = cleaned_data.get("due_date")
         
         is_library_member = Member.objects.filter(library=library, email=member.email).exists()
         
@@ -33,6 +35,9 @@ class BorrowBookForm(forms.ModelForm):
         
         if not book.is_book_available:
             raise forms.ValidationError("This book is not currently available.")
+        
+        if due_date and due_date < timezone.now().date():
+            raise forms.ValidationError("The due date cannot be less than the current date")
         
         # Check if the member has already borrowed this book
         borrow_books = BorrowBook.objects.filter(
@@ -58,8 +63,8 @@ class BorrowBookForm(forms.ModelForm):
         instance = super().save(commit=False)
         
         if commit:
-            instance.save()
             instance.borrow_book()
+            instance.save()
         return instance
             
             
