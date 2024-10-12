@@ -61,16 +61,20 @@ class GENRE:
 class STATUS:
     
     BORROWED  = "B"
-    RESERVED  = "R"
     RETURNED  = "RR"
         
     CHOICES = [
         (BORROWED, "Borrowed"),
-        (RESERVED, "Reserved"),
         (RETURNED, "Returned"),
             
     ]
     
+    
+class RESERVATION_STATUS:
+    ACTIVE    = "a"
+    CANCELLED  = "y"
+    CHOICES    = [(ACTIVE, "Active"), (CANCELLED, "Cancelled")]
+   
      
 class Library(models.Model):
     name             = models.CharField(max_length=40, unique=True)
@@ -78,7 +82,7 @@ class Library(models.Model):
     location         = models.CharField(max_length=30, blank=True, null=True)
     
     class Meta:
-        verbose_name = "Library"
+        verbose_name        = "Library"
         verbose_name_plural = "Libraries"
         
     def __str__(self):
@@ -111,7 +115,6 @@ class Library(models.Model):
         """
         return self.book_records.filter(status=STATUS.BORROWED).count()
     
-    
     def get_reserved_books_count(self):
         """
         Returns the number of books not available for reservation.
@@ -119,13 +122,14 @@ class Library(models.Model):
         Returns:
             int: The count of non-available books.
         """
-        return self.book_records.filter(status=STATUS.RESERVED).count()
+        return self.books.filter(is_reserved=True).count()
     
     def get_members_count(self):
         return self.members.count()
     
     def display_member(self):
         return self.members
+    
     
 class LibraryHours(models.Model):
     class Meta:
@@ -278,6 +282,7 @@ class Book(models.Model):
     is_book_available = models.BooleanField(default=True)
     library          = models.ForeignKey(Library, on_delete=models.CASCADE, related_name="books")
     available_copies = models.PositiveSmallIntegerField(default=10)
+    is_reserved      = models.BooleanField(default=False)
 
     @property
     def num_of_authors(self):
@@ -295,6 +300,9 @@ class Book(models.Model):
             if save:
                 self.save()
 
+    def can_reserve(self) -> bool:
+        return True if self.is_book_available and not self.is_reserved else False
+    
     def save(self, *args, **kwargs):
         
         if self.is_book_available:
@@ -304,3 +312,58 @@ class Book(models.Model):
         
     def __str__(self) -> str:
         return self.title.title()
+    
+    
+
+class Reservation(models.Model):      
+    book             = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="reservations")
+    member           = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="reservations")
+    status           = models.CharField(choices=RESERVATION_STATUS.CHOICES, max_length=1)
+    reservation_date = models.DateTimeField(auto_now_add=True)
+    
+    def can_reserve_book(self):
+        return self.book.can_reserve()
+    
+    def reserve_book(self):
+        self.book.is_reserved = True
+        self.book.save()
+    
+    def cancel_reservation(self):
+        self.book.is_reserved = False
+        self.book.save()
+        
+
+class ReservationQueue(models.Model):
+    book       = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="reservation_queue")
+    member     = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="reservation_queue")
+    position   = models.IntegerField(editable=False, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+      
+    @classmethod
+    def next_in_queue(cls, book):
+        """
+        Get the next member in line for a book.
+        """
+        pass
+    
+    def save(self, *args, **kwargs):
+        
+        if not self.position:
+            highest_position = ReservationQueue.objects.filter(book=self.book).aggregate(
+                models.Max('position')
+            )['position__max']
+
+            self.positon = (highest_position or 0) + 1 
+            
+        super().save(*args, **kwargs)
+    
+    
+    
+class Notification(models.Model):
+    member    = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="notifications")
+    message   = models.CharField(max_length=255)
+    is_read   = models.BooleanField(default=False)
+    date_sent = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self) -> str:
+        return f"Notification for: {self.member} - Notification: {self.message[:255]}"

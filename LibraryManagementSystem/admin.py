@@ -5,8 +5,17 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest 
 
 # Register your models here.
-from .models import Library, Member, Book, BorrowBook, Author, LibraryHours
+from .models import (Library, 
+                     Member, 
+                     Book, 
+                     BorrowBook, 
+                     Author, 
+                     LibraryHours, 
+                     Reservation, 
+                     ReservationQueue)
+
 from LibraryManagementSystem.forms.loan_book_form import BorrowBookForm
+from LibraryManagementSystem.forms.reserve_book_form import ReservationModelForm
 
 
 class LibraryHoursInline(admin.TabularInline):
@@ -14,6 +23,13 @@ class LibraryHoursInline(admin.TabularInline):
     verbose_name        = "Library Hour"
     verbose_name_plural = "Library Hours"
     extra = 7  
+    
+
+class ReservationInline(admin.TabularInline):
+    model               = Reservation
+    verbose_name        = "Reservation"
+    verbose_name_plural = "Reservations"
+    extra               = 0
     
     
 class LibraryAdmin(admin.ModelAdmin):
@@ -95,6 +111,8 @@ class BookAdmin(admin.ModelAdmin):
     list_display_links = ["title", "ISBN"]
     search_fields      = ["title", "ISBN", "genre"]
     readonly_fields    = ["created_on", "modified_on", "ISBN"]
+    
+    inlines            = [ReservationInline]
   
     def num_of_authors(self, obj):
         """The number of authors for a given book"""
@@ -131,10 +149,22 @@ class BorrowBookAdmin(admin.ModelAdmin):
   
 
 
+class ReservationAdmin(admin.ModelAdmin):
+    list_display = ["id", "book", "member", "status", "reservation_date"]
+    list_display_links = ["id", "book"]
+    form         = ReservationModelForm
+
+
+class ReservationQueueAdmin(admin.ModelAdmin):
+    list_display = ["book", "member", "position"]
+
+
 admin.site.register(Library, LibraryAdmin)
 admin.site.register(Member, MemberAdmin)
 admin.site.register(Author, AuthorAdmin)
 admin.site.register(Book, BookAdmin)
 admin.site.register(BorrowBook, BorrowBookAdmin)
+admin.site.register(Reservation, ReservationAdmin)
+admin.site.register(ReservationQueue, ReservationQueueAdmin)
 
     

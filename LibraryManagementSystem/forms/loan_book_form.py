@@ -56,6 +56,9 @@ class BorrowBookForm(forms.ModelForm):
                 "You cannot borrow any more books, as you have reached the borrowing limit for this library."
             )
         
+        
+        # add status for reserved here
+        
         return cleaned_data
 
     def save(self, commit=False):  
